@@ -3,11 +3,11 @@ fn main() {
 
     let output: u32 = input.lines().fold(0, |acc, line| acc + calibrate(line));
 
+    // 54078
     dbg!(output);
 }
 
 fn calibrate(input: &str) -> u32 {
-    dbg!(input);
     let words = [
         ("one", 1),
         ("two", 2),
@@ -23,28 +23,22 @@ fn calibrate(input: &str) -> u32 {
     let mut pair = [0, 0];
     let mut valid_numbers = Vec::new();
 
-    for len in lens {
-        for start_index in 0..input.len() {
-            let c = input.chars().nth(start_index).unwrap();
+    'outer: for start_index in 0..input.len() {
+        let c = input.chars().nth(start_index).unwrap();
+        if c.is_numeric() {
+            let c = c.to_digit(10).unwrap();
+            valid_numbers.push(c);
+            continue;
+        }
 
-            if c.is_numeric() {
-                let c = c.to_digit(10).unwrap();
-                dbg!(c);
-                // if !valid_numbers.iter().any(|v| *v == c) {
-                valid_numbers.push(c);
-                // }
+        for len in lens {
+            let candidate = input.get(start_index..start_index + len);
+            if candidate.is_none() {
+                continue;
             }
-
-            if start_index > input.len() - 1 {
-                break;
-            };
-
-            let end_index = start_index + len;
-            let candidate = input.get(start_index..end_index);
-
             if let Some(v) = words.iter().find(|v| Some(v.0) == candidate) {
-                dbg!(v);
                 valid_numbers.push(v.1 as u32);
+                continue 'outer;
             }
         }
     }
@@ -55,20 +49,6 @@ fn calibrate(input: &str) -> u32 {
 
     if let Some(number) = valid_numbers.last() {
         pair[1] = *number;
-    }
-    dbg!(valid_numbers);
-
-    let it = input
-        .chars()
-        .filter(|v| v.is_numeric())
-        .map(|v| v.to_digit(10).unwrap());
-
-    if pair[0] == 0 {
-        pair[0] = it.clone().nth(0).expect("no numbers in the input");
-    }
-
-    if pair[1] == 0 {
-        pair[1] = pair[0];
     }
 
     pair[0] * 10 + pair[1]
@@ -118,5 +98,17 @@ mod tests {
     fn example_07() {
         let input = calibrate("7pqrstsixteen");
         assert_eq!(input, 76);
+    }
+
+    #[test]
+    fn example_08() {
+        let input = calibrate("pkqxk7");
+        assert_eq!(input, 77);
+    }
+
+    #[test]
+    fn example_09() {
+        let input = calibrate("7kqxkk");
+        assert_eq!(input, 77);
     }
 }
