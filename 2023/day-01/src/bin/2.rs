@@ -9,49 +9,25 @@ fn main() {
 
 fn calibrate(input: &str) -> u32 {
     let words = [
-        ("one", 1),
-        ("two", 2),
-        ("three", 3),
-        ("four", 4),
-        ("five", 5),
-        ("six", 6),
-        ("seven", 7),
-        ("eight", 8),
-        ("nine", 9),
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
     ];
-    let lens: [usize; 3] = [3, 4, 5];
-    let mut pair = [0, 0];
-    let mut valid_numbers = Vec::new();
+    let mut numbers = Vec::new();
 
-    'outer: for start_index in 0..input.len() {
-        let c = input.chars().nth(start_index).unwrap();
-        if c.is_numeric() {
-            let c = c.to_digit(10).unwrap();
-            valid_numbers.push(c);
-            continue;
+    for (start_index, c) in input.chars().enumerate() {
+        if let Some(c) = c.to_digit(10) {
+            numbers.push(c);
         }
-
-        for len in lens {
+        for len in [3, 4, 5] {
             let candidate = input.get(start_index..start_index + len);
-            if candidate.is_none() {
-                continue;
-            }
-            if let Some(v) = words.iter().find(|v| Some(v.0) == candidate) {
-                valid_numbers.push(v.1 as u32);
-                continue 'outer;
+            if let Some(i) =
+                words.into_iter().position(|v| Some(v) == candidate)
+            {
+                numbers.push(i as u32 + 1);
             }
         }
     }
 
-    if let Some(number) = valid_numbers.first() {
-        pair[0] = *number;
-    }
-
-    if let Some(number) = valid_numbers.last() {
-        pair[1] = *number;
-    }
-
-    pair[0] * 10 + pair[1]
+    numbers.first().unwrap() * 10 + numbers.last().unwrap()
 }
 
 #[cfg(test)]

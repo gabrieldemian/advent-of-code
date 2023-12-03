@@ -3,22 +3,16 @@ fn main() {
 
     let output: u32 = input.lines().fold(0, |acc, line| acc + calibrate(line));
 
+    // 54601
     dbg!(output);
 }
 
 fn calibrate(input: &str) -> u32 {
-    let mut r = 0;
-    let it = input
-        .chars()
-        .filter(|v| v.is_numeric())
-        .map(|v| v.to_digit(10).unwrap());
-
-    let first = it.clone().nth(0).expect("no numbers in the input");
-    let last = it.last().expect("no numbers in the input");
-
-    r += first * 10 + last;
-
-    r
+    let values: Vec<u32> =
+        input.chars().filter_map(|v| v.to_digit(10)).collect();
+    let first = values.first().unwrap();
+    let last = values.last().unwrap_or(first);
+    first * 10 + last
 }
 
 #[cfg(test)]
