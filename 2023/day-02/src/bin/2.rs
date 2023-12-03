@@ -1,3 +1,11 @@
+use std::collections::HashMap;
+
+use once_cell::sync::Lazy;
+use regex::Regex;
+
+static COLORS_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(\d+) (red|blue|green)").unwrap());
+
 fn main() {
     let input = include_str!("../../input.txt");
 
@@ -8,33 +16,24 @@ fn main() {
 }
 
 fn play(input: &str) -> u32 {
-    let dots_index = input.chars().position(|v| v == ':').unwrap();
+    let input: Vec<(u32, &str)> = COLORS_RE
+        .captures_iter(input)
+        .map(|v| {
+            let (_, [a, b]) = v.extract();
+            (a.parse().unwrap(), b)
+        })
+        .collect();
 
-    let input = input.split_at(dots_index + 2).1.replace(";", ",");
-    let input: Vec<&str> = input.split(", ").collect();
+    let mut numbers: HashMap<&str, u32> =
+        HashMap::from([("red", 0), ("green", 0), ("blue", 0)]);
 
-    let mut numbers: [u32; 3] = [0, 0, 0];
-
-    for line in input {
-        let pair: Vec<&str> = line.split(" ").collect();
-        let number: u32 = pair[0].parse().unwrap();
-        let color: String = pair[1].parse().unwrap();
-
-        match color.as_str() {
-            "red" if number > numbers[0] => {
-                numbers[0] = number;
-            }
-            "green" if number > numbers[1] => {
-                numbers[1] = number;
-            }
-            "blue" if number > numbers[2] => {
-                numbers[2] = number;
-            }
-            _ => {}
+    for (number, color) in input {
+        if number > numbers[color] {
+            *numbers.get_mut(color).unwrap() = number;
         }
     }
 
-    numbers.into_iter().fold(1, |acc, v| acc * v)
+    numbers.values().fold(1, |acc, v| acc * v)
 }
 
 #[cfg(test)]

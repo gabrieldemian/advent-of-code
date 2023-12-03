@@ -1,3 +1,5 @@
+use regex::Regex;
+
 fn main() {
     let input = include_str!("../../input.txt");
 
@@ -8,30 +10,23 @@ fn main() {
 }
 
 fn play(input: &str) -> u32 {
-    let dots_index = input.chars().position(|v| v == ':').unwrap();
-    let id = input.get(5..dots_index);
-    let id = id.unwrap().parse::<u32>().unwrap();
+    let id_re = Regex::new(r"^\w+ (\d+)").unwrap();
+    let colors_re = Regex::new(r"(\d+) (red|blue|green)").unwrap();
 
-    let input = input.split_at(dots_index + 2).1.replace(";", ",");
-    let input: Vec<&str> = input.split(", ").collect();
+    let id: u32 = id_re.captures(input).unwrap()[1].parse().unwrap();
+    let pairs: Vec<&str> =
+        colors_re.find_iter(input).map(|v| v.as_str()).collect();
 
-    for line in input {
-        let pair: Vec<&str> = line.split(" ").collect();
-        let number: u32 = pair[0].parse().unwrap();
-        let color: String = pair[1].parse().unwrap();
+    for pair in pairs {
+        let number: u32 = colors_re.captures(pair).unwrap()[1].parse().unwrap();
+        let color = &colors_re.captures(pair).unwrap()[2];
 
-        match color.as_str() {
-            "red" if number > 12 => {
-                return 0;
-            }
-            "green" if number > 13 => {
-                return 0;
-            }
-            "blue" if number > 14 => {
-                return 0;
-            }
-            _ => {}
-        }
+        if color == "red" && number > 12
+            || color == "green" && number > 13
+            || color == "blue" && number > 14
+        {
+            return 0;
+        };
     }
 
     id

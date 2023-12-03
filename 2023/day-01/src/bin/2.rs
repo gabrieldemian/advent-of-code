@@ -8,10 +8,10 @@ fn main() {
 }
 
 fn calibrate(input: &str) -> u32 {
+    let mut numbers = Vec::new();
     let words = [
         "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
     ];
-    let mut numbers = Vec::new();
 
     for (start_index, c) in input.chars().enumerate() {
         if let Some(c) = c.to_digit(10) {
