@@ -1,42 +1,99 @@
 fn main() {
     let input = include_str!("../../input.txt");
 
-    let output = play_cards(input);
+    let output: u128 = lowest_location(input);
 
-    // 5422730
+    //
     dbg!(output);
 }
 
-fn play_cards(input: &str) -> u32 {
-    let mut cards = vec![1; input.lines().count()];
+/// A str of integers separated by single space
+/// that can safely be converted to a vec/array of integers.
+#[derive(Debug, Clone)]
+struct NString<'a>(&'a str);
 
-    for (i, line) in input.lines().enumerate() {
-        let mut points: usize = 0;
-        let start_w = line.find(": ").unwrap() + 2;
-        let end_w = line.find(" |").unwrap();
-
-        let winning = line.get(start_w..end_w).unwrap();
-        let winning: Vec<u8> =
-            winning.split(" ").filter_map(|v| v.parse().ok()).collect();
-
-        let hand = line.get(end_w + 3..).unwrap();
-        let hand: Vec<u8> =
-            hand.split(" ").filter_map(|v| v.parse().ok()).collect();
-
-        for h in &hand {
-            if winning.iter().any(|v| *v == *h) {
-                points += 1;
-            }
+impl<'a> From<NString<'a>> for [u128; 3] {
+    fn from(value: NString<'a>) -> Self {
+        let mut r: [u128; 3] = [0; 3];
+        for (i, v) in value.0.split(" ").enumerate() {
+            r[i] = v.parse().unwrap();
         }
+        r
+    }
+}
 
-        let end = (i + points).min(cards.len() - 1);
+impl<'a> From<NString<'a>> for Vec<u128> {
+    fn from(value: NString<'a>) -> Self {
+        value.0.split(" ").map(|c| c.parse().unwrap()).collect()
+    }
+}
 
-        for y in i..end {
-            cards[y + 1] += cards[i];
+fn lowest_location(input: &str) -> u128 {
+    // dr sr len
+    // dr sr len
+    let old_seeds: Vec<u128> = NString(
+        input.lines().nth(0).unwrap().split("seeds: ").collect::<Vec<&str>>()
+            [1],
+    )
+    .into();
+
+    // let new_seeds: Vec<u128> = Vec::new(seeds.iter().sum::<u128>() as usize);
+    // let len: usize = seeds.iter().sum::<u128>() as usize;
+    // let mut new_seeds: Vec<u128> = vec![0; len];
+    let mut seeds = Vec::new();
+
+    for pair in old_seeds.chunks(2) {
+        for i in pair[0]..pair[0] + pair[1] {
+            seeds.push(i);
         }
     }
 
-    cards.into_iter().map(|v| v as u32).sum()
+    println!("seeds {seeds:?}");
+
+    let mut maps: Vec<(usize, usize)> = Vec::new();
+
+    for (i, line) in input.lines().enumerate() {
+        if i < 2 {
+            continue;
+        };
+        if line.find(':').is_some() {
+            maps.push((i + 1, 0));
+        }
+        let is_last = i == input.lines().count() - 1;
+        if line.is_empty() || is_last {
+            let pair = maps.last_mut().unwrap();
+            pair.1 = if is_last { i + 1 } else { i };
+        }
+    }
+
+    for (_, (start, end)) in maps.iter().enumerate() {
+        let lines: Vec<[u128; 3]> = input
+            .lines()
+            .skip(*start)
+            .take(end - start)
+            .map(|v| NString(v).into())
+            .collect();
+
+        'seed_loop: for (_, seed) in seeds.iter_mut().enumerate() {
+            for (_, [dr, sr, len]) in lines.iter().enumerate() {
+                if (*seed >= *sr) && *seed <= *sr + *len {
+                    let diff = *seed - *sr;
+                    let output = dr + diff;
+                    // seeds[seed_i] = output;
+                    // println!("seed {seed}");
+                    *seed = output;
+                    continue 'seed_loop;
+                }
+                // if seed_i == 1 {
+                //     println!("seed {seed} sr {sr}");
+                //     println!("---");
+                // }
+            }
+        }
+    }
+
+    dbg!(&seeds);
+    seeds.into_iter().min().unwrap()
 }
 
 #[cfg(test)]
@@ -45,24 +102,42 @@ mod tests {
 
     #[test]
     fn example_01() {
-        let output = play_cards(
-            "Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
-Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
-Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
-Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
-Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
-Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
-",
-        );
-        assert_eq!(output, 30);
-    }
+        let output = lowest_location(
+            "seeds: 79 14 55 13
 
-    #[test]
-    fn example_02() {
-        let output = play_cards(
-            "Card   1: 42 68 56  3 28 97  1 78 55 48 | 78 54  3 38 94 73 72 57 51 31 86 43  7 81  4 27 26 58 75 69 74 55  5 28 40
+seed-to-soil map:
+50 98 2
+52 50 48
+
+soil-to-fertilizer map:
+0 15 37
+37 52 2
+39 0 15
+
+fertilizer-to-water map:
+49 53 8
+0 11 42
+42 0 7
+57 7 4
+
+water-to-light map:
+88 18 7
+18 25 70
+
+light-to-temperature map:
+45 77 23
+81 45 19
+68 64 13
+
+temperature-to-humidity map:
+0 69 1
+1 0 69
+
+humidity-to-location map:
+60 56 37
+56 93 4
 ",
         );
-        assert_eq!(output, 1);
+        assert_eq!(output, 46);
     }
 }
