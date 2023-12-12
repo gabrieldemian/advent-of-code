@@ -1,3 +1,10 @@
+#[derive(Debug, Clone)]
+struct Portal {
+    dst: u64,
+    src: u64,
+    len: u64,
+}
+
 fn main() {
     let input = include_str!("../../input.txt");
 
@@ -7,80 +14,43 @@ fn main() {
     dbg!(output);
 }
 
-/// A str of integers separated by single space
-/// that can safely be converted to a vec/array of integers.
-#[derive(Debug, Clone)]
-struct NString<'a>(&'a str);
-
-impl<'a> From<NString<'a>> for [u64; 3] {
-    fn from(value: NString<'a>) -> Self {
-        let mut r: [u64; 3] = [0; 3];
-        for (i, v) in value.0.split(" ").enumerate() {
-            r[i] = v.parse().unwrap();
-        }
-        r
-    }
-}
-
-impl<'a> From<NString<'a>> for Vec<u64> {
-    fn from(value: NString<'a>) -> Self {
-        value.0.split(" ").map(|c| c.parse().unwrap()).collect()
-    }
-}
-
 fn lowest_location(input: &str) -> u64 {
-    // dr sr len
-    // dr sr len
-    let mut seeds: Vec<u64> = NString(
-        input.lines().nth(0).unwrap().split("seeds: ").collect::<Vec<&str>>()
-            [1],
-    )
-    .into();
-    println!("seeds {seeds:?}");
+    let (seed, maps) = input.split_once("\n\n").unwrap();
+    let seeds: Vec<u64> =
+        seed.split(' ').skip(1).map(|n| n.parse().unwrap()).collect();
 
-    let mut maps: Vec<(usize, usize)> = Vec::new();
+    let maps: Vec<Vec<Portal>> = maps
+        .split("\n\n")
+        .map(|s| {
+            s.split('\n')
+                .skip(1)
+                .filter(|v| !v.is_empty())
+                .map(|line| {
+                    let trio: Vec<u64> =
+                        line.split(' ').map(|n| n.parse().unwrap()).collect();
+                    Portal { dst: trio[0], src: trio[1], len: trio[2] }
+                })
+                .collect()
+        })
+        .collect();
 
-    for (i, line) in input.lines().enumerate() {
-        if i < 2 {
-            continue;
-        };
-        if line.find(':').is_some() {
-            maps.push((i + 1, 0));
-        }
-        let is_last = i == input.lines().count() - 1;
-        if line.is_empty() || is_last {
-            let pair = maps.last_mut().unwrap();
-            pair.1 = if is_last { i + 1 } else { i };
-        }
-    }
-
-    for (_, (start, end)) in maps.iter().enumerate() {
-        let lines: Vec<[u64; 3]> = input
-            .lines()
-            .skip(*start)
-            .take(end - start)
-            .map(|v| NString(v).into())
-            .collect();
-
-        // println!("maps of line {lines:?}");
-        'seed_loop: for (seed_i, seed) in seeds.iter_mut().enumerate() {
-            for (_, [dr, sr, len]) in lines.iter().enumerate() {
-                if (*seed >= *sr) && *seed <= *sr + *len {
-                    let diff = *seed - *sr;
-                    let output = dr + diff;
-                    *seed = output;
-                    continue 'seed_loop;
+    let result = maps.iter().fold(seeds, |seeds, map| {
+        let new_seeds = seeds
+            .into_iter()
+            .map(|mut seed| {
+                for portal in map {
+                    if seed <= portal.src + portal.len && seed >= portal.src {
+                        seed = portal.dst + (seed - portal.src);
+                        break;
+                    }
                 }
-                // if seed_i == 1 {
-                //     println!("seed {seed} sr {sr}");
-                //     println!("---");
-                // }
-            }
-        }
-    }
-
-    dbg!(&seeds);
-    seeds.into_iter().min().unwrap()
+                seed
+            })
+            .collect();
+        new_seeds
+    });
+    dbg!(&result);
+    *result.iter().min().unwrap()
 }
 
 #[cfg(test)]

@@ -5,7 +5,7 @@ fn main() {
 
     let output: u64 = lowest_location(input);
 
-    // 260119618
+    // 100165128
     dbg!(output);
 }
 
@@ -14,12 +14,6 @@ struct Portal {
     dst: u64,
     src: u64,
     len: u64,
-}
-
-impl Portal {
-    fn range(&self) -> Range<u64> {
-        self.src..self.src + self.len
-    }
 }
 
 fn lowest_location(input: &str) -> u64 {
@@ -45,85 +39,90 @@ fn lowest_location(input: &str) -> u64 {
         })
         .collect::<Vec<_>>();
 
-    let mut range_seed: Vec<Range<u64>> = Vec::with_capacity(seed.len());
+    let mut seeds: Vec<Range<u64>> = Vec::with_capacity(seed.len());
 
     for p in seed.chunks(2) {
-        range_seed.push(p[0]..p[0] + p[1]);
+        seeds.push(p[0]..p[0] + p[1]);
     }
+    // # Flow
+    // initial seed: 79..93, 55..68
+    //
+    // seed-to-soil map:--
+    // 50 98 2  -portal  |--layer
+    // 52 50 48 -portal---
+    //
+    // seed (after map): 81..95, 57..70
+    // ...other maps
+    //
+    // # Partition
+    // map_range  50..98
+    //        ------------------------------------
+    // seed_range 79..93
+    //                 ---------------------
+    //      [ 50..79 ][  79..93             ][93..98]
+    //                   81..93 <- new seed range
+    // for each fold iteration, the starting seed will be modified.
+    // one seed range will pass through all maps of the input.
+    let results: Vec<Range<u64>> = maps.iter().fold(seeds, |seeds, map| {
+        println!("fold {seeds:?} maps {maps:?}");
+        let seeds = seeds
+            .into_iter()
+            .flat_map(|seed| {
+                // for each seed, there will be partitions and maybe a
+                // transformed seed that fits the map.
+                let mut mapped_seeds: Vec<Range<u64>> = vec![];
+                // all partitions of the `seed` of the flat_map, starting with
+                // itself.
+                let mut partitions: Vec<Range<u64>> = vec![seed];
 
-    let seed = range_seed.clone();
+                for portal in map {
+                    // smaller partitions of each `partition` above.
+                    let mut temp_partitions: Vec<Range<u64>> = Vec::new();
+                    // println!("un_map {un_map:?}");
 
-    // dbg!(&seed);
-    // dbg!(&maps);
-    // dbg!(&range_seed);
+                    // for each map, we will also match the smaller partitions
+                    // of the original seed range.
+                    for partition in partitions {
+                        let first: Range<u64> =
+                            partition.start..partition.end.min(portal.src);
+                        let second: Range<u64> = partition.start.max(portal.src)
+                            ..partition.end.min(portal.src + portal.len);
+                        let third: Range<u64> = (portal.src + portal.len)
+                            .max(partition.start)
+                            ..partition.end;
 
-    let result = maps.iter().fold(seed, |seed, maps| {
-        seed.into_iter()
-            .flat_map(|s| {
-                println!("seed range: {s:?}");
-                // map_range  50..98
-                //        ------------------------------------
-                // seed_range 79..93
-                //                 ---------------------
-                //      [ 50..79 ][  79..93             ][93..98]
-                //                   81..93
-                // map_range
-                //        ------------------------------------
-                // seed_range
-                // --------------------
-                //[       ][           ][                    ]
-                let mut new_map: Vec<Range<u64>> = vec![];
-
-                for map in maps {
-                    let map_range = map.range();
-
-                    let first: Range<u64> = Range {
-                        start: s.start.min(map_range.start),
-                        end: s.start.max(map_range.start),
-                    };
-
-                    let second: Range<u64> = Range {
-                        start: s.start.max(map_range.start),
-                        end: s.end.min(map_range.end),
-                    };
-
-                    let third: Range<u64> = Range {
-                        start: s.end.min(map_range.end),
-                        end: s.end.max(map_range.end),
-                    };
-
-                    println!("map range: {map_range:?}");
-
-                    for mut partition in [first, second, third] {
-                        let fits = partition.start > map_range.start
-                            && partition.end < map_range.end;
-
-                        println!(
-                            "range: {partition:?} fits {}",
-                            partition.start > map_range.start
-                                && partition.end < map_range.end
-                        );
-
-                        if fits {
-                            let start = map.dst + (partition.start - map.src);
-                            partition.start = start;
-                            partition.end =
-                                start + (partition.end - partition.start);
-                            println!("transformed: {partition:?}");
+                        // first and third partition will never fit,
+                        // however, if they are valid, we want to test
+                        // them on the next `map` of the iteration.
+                        for partition in [first, third] {
+                            if !partition.is_empty() {
+                                temp_partitions.push(partition);
+                            }
                         }
-                        new_map.push(partition);
-                        if fits {
-                            break;
-                        };
+                        // only the second partition will be the one to fit the
+                        // range
+                        if !second.is_empty() {
+                            mapped_seeds.push(
+                                portal.dst + second.start - portal.src
+                                    ..portal.dst + second.end - portal.src,
+                            );
+                        }
                     }
-                    println!("---");
+                    // the result of each layer will be the starting point of
+                    // the next layer of maps.
+                    // println!("new_map {new_map:?}");
+                    partitions = temp_partitions;
                 }
-
-                new_map
+                mapped_seeds.extend(partitions);
+                println!("mapped_seeds {mapped_seeds:?}");
+                mapped_seeds
             })
-            .collect()
+            .collect();
+        println!("seeds {seeds:?}");
+        seeds
     });
-    result.iter().map(|s| s.start).min().unwrap()
+    dbg!(&results);
+    results.iter().map(|s| s.start).min().unwrap()
 }
 
 #[cfg(test)]
@@ -209,7 +208,7 @@ humidity-to-location map:
 56 93 4
 ",
         );
-        assert_eq!(output, 86);
+        assert_eq!(output, 56);
     }
 
     #[test]
