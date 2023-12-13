@@ -42,6 +42,18 @@ dependencies = [
 [[package]]
 name = "day-05"
 version = "0.1.0"
+
+[[package]]
+name = "day-06"
+version = "0.1.0"
+dependencies = [
+ "once_cell",
+ "regex",
+]
+
+[[package]]
+name = "day-07"
+version = "0.1.0"
 dependencies = [
  "once_cell",
  "regex",
