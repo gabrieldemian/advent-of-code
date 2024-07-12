@@ -1,7 +1,26 @@
-fn main() {}
+fn main() {
+    let input = include_str!("../../input.txt");
+    let output = count(input);
+    dbg!(output);
+}
 
+/// return the highest calorie
 fn count(input: &str) -> u32 {
-    todo!()
+    let mut highest: u32 = 0;
+    let mut calories: u32 = 0;
+
+    for line in input.lines() {
+        if !line.is_empty() {
+            calories += line.parse::<u32>().unwrap();
+            continue;
+        }
+        if calories > highest {
+            highest = calories;
+        }
+        calories = 0;
+    }
+
+    highest
 }
 
 #[cfg(test)]
