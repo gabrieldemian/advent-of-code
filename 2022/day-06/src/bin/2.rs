@@ -11,7 +11,6 @@ fn find_marker(input: &str) -> usize {
     let mut r = 0;
     'outer: for i in 0..input.len() {
         let Some(marker) = input.get(i..i + N) else { break };
-        // println!("{marker:?}");
         for (y, c) in marker.chars().enumerate() {
             if marker
                 .chars()
@@ -22,7 +21,6 @@ fn find_marker(input: &str) -> usize {
                 continue 'outer;
             }
         }
-        // println!("found: {marker:?}");
         r = i + N;
         break;
     }
