@@ -92,7 +92,7 @@ fn calc_dir(input: &str) -> u64 {
         }
     }
 
-    // dbg!(&fs);
+    dbg!(&fs);
     fs.into_values().fold(0, |acc, v| if v <= 100_000 { acc + v } else { acc })
 }
 
